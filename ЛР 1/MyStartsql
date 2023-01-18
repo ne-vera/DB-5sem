@@ -1,0 +1,42 @@
+create table PVV_t( x number(3), s varchar2(50));
+
+insert into PVV_t values (1, 'Hello');
+insert into PVV_t values (2, 'World');
+insert into PVV_t values (3, '!!!');
+
+update PVV_t set s = ', World' where x = 2;
+update PVV_t set x = 4 where s = '!!!';
+
+commit;
+
+select * from PVV_t;
+select * from PVV_t where x = 4;
+select x from PVV_t where s = 'Hello';
+select count(x) from PVV_t;
+
+delete from PVV_t where x = 4;
+commit;
+
+alter table PVV_t add constraint x_pk primary key (x);
+
+create table PVV_t1 (num number(3), str varchar2(50), 
+                      constraint num_fk foreign key (num) references PVV_t(x));
+
+insert into PVV_t1 values (1, 'World');
+insert into PVV_t1 values (2, 'Hello');
+
+select pvv_t.s, pvv_t1.str from pvv_t left join pvv_t1
+on pvv_t.x = pvv_t1.num;
+
+select pvv_t.s, pvv_t1.str from pvv_t right join pvv_t1
+on pvv_t.x = pvv_t1.num;
+
+select pvv_t.s, pvv_t1.str from pvv_t inner join pvv_t1
+on pvv_t.x = pvv_t1.num;
+
+
+drop table PVV_t1;
+drop table PVV_t;
+
+commit;
+
