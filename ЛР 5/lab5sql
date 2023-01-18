@@ -1,0 +1,143 @@
+--1. список всех файлов табличных пространств 
+--перманентных 
+select tablespace_name, file_name from DBA_DATA_FILES; 
+-- и временных
+select tablespace_name, file_name from DBA_TEMP_FILES;
+
+--2. Создайте табличное пространство с именем XXX_QDATA (10m).
+create tablespace PVV_QDATA
+datafile 'C:\labs_bd\lab 5\PVV_QDATA.dbf'
+size 10m
+extent management local
+offline;
+
+--drop tablespace PVV_QDATA including contents and datafiles;
+
+--Затем переведите табличное пространство в состояние online. 
+alter tablespace PVV_QDATA online;
+
+--Выделите пользователю XXX квоту 2m в пространстве XXX_QDATA
+ALTER SESSION SET "_ORACLE_SCRIPT"=true;
+select * from DBA_USERS;
+alter user PVVCORE quota 2m on PVV_QDATA;
+--От имени XXX в  пространстве XXX_T1 создайте таблицу из двух столбцов,
+--один из которых будет являться первичным ключом. 
+
+create table pvv_table (
+    num1 number(5) primary key,
+    num2 number(5)) tablespace PVV_QDATA;
+--В таблицу добавьте 3 строки.
+insert into pvv_table values(1,1);
+insert into pvv_table values(2,2);
+insert into pvv_table values(3,3);
+
+--3. 1. Получите список сегментов табличного пространства  XXX_QDATA. 
+--Определите сегмент таблицы XXX_T1. 
+--Определите остальные сегменты.
+select * from dba_segments where tablespace_name like 'PVV%';
+select * from dba_segments;
+
+--4. Удалите (DROP) таблицу XXX_T1
+drop table pvv_table;
+--Получите список сегментов табличного пространства  XXX_QDATA. 
+select * from dba_segments where tablespace_name like 'PVV%';
+--Выполните SELECT-запрос к представлению USER_RECYCLEBIN
+select * from user_recyclebin;
+
+--5. Восстановите (FLASHBACK) удаленную таблицу. 
+flashback table pvv_table to before drop;
+
+--6. Выполните PL/SQL-скрипт, заполняющий таблицу XXX_T1 данными (10000 строк). 
+begin
+  for x in 0..10000
+  loop
+    insert into pvv_table values(x, x);
+  end loop;
+  commit;
+end;
+
+select * from pvv_table;
+
+--7. Определите сколько в сегменте таблицы XXX_T1 экстентов, их размер в блоках и байтах. 
+--Получите перечень всех экстентов. 
+select *from DBA_EXTENTS where SEGMENT_NAME like 'PVV%';
+select extent_id, blocks, bytes from DBA_EXTENTS where SEGMENT_NAME like 'PVV%';
+select *from DBA_EXTENTS;
+
+--8.
+drop tablespace PVV_QDATA including contents and datafiles;
+
+--9. Получите перечень всех групп журналов повтора. Определите текущую группу журналов повтора.
+select * from v$log;
+
+--10. Получите перечень файлов всех журналов повтора инстанса
+select * from v$logfile;
+
+--11. С помощью переключения журналов повтора пройдите полный цикл переключений. 
+alter system switch logfile;
+select * from v$log;
+--Запишите серверное время в момент вашего первого переключения (оно понадобится для выполнения следующих заданий).
+--8.33 13.10.22
+
+--12. Создайте дополнительную группу журналов повтора с тремя файлами журнала.
+alter database add logfile group 4 'C:\app\ora_install_user\oradata\orcl\REDO04.LOG' 
+                                                size 50 m blocksize 512;
+alter database add logfile member 'C:\app\ora_install_user\oradata\orcl\REDO041.LOG'  to group 4;
+alter database add logfile member 'C:\app\ora_install_user\oradata\orcl\REDO042.LOG'  to group 4;
+--Убедитесь в наличии группы и файлов, 
+select * from v$log;
+--а также в работоспособности группы (переключением). 
+alter system switch logfile;
+--Проследите последовательность SCN. 
+select group#, sequence#, bytes, members, status, first_change# from v$log;
+
+--13. Удалите созданную группу журналов повтора. Удалите созданные вами файлы журналов на сервере.
+alter database drop logfile member 'C:\app\ora_install_user\oradata\orcl\REDO04.LOG';
+alter database drop logfile member 'C:\app\ora_install_user\oradata\orcl\REDO041.LOG';
+alter database drop logfile member 'C:\app\ora_install_user\oradata\orcl\REDO042.LOG';
+
+alter database clear unarchived logfile group 4;
+alter database drop logfile group 4;
+select group#, sequence#, bytes, members, status, first_change# from v$log;
+
+--14. Определите, выполняется или нет архивирование журналов повтора.
+SELECT NAME, LOG_MODE FROM V$DATABASE;
+SELECT INSTANCE_NAME, ARCHIVER, ACTIVE_STATE FROM V$INSTANCE;
+
+--15. Определите номер последнего архива
+SELECT * FROM V$ARCHIVED_LOG;
+
+--16. Включите архивирование. 
+
+--17. EX. Принудительно создайте архивный файл. 
+ALTER SYSTEM SET LOG_ARCHIVE_DEST_1 ='LOCATION=C:\app\ora_install_user\oradata\orcl\archive.arc';
+--Определите его номер. 
+--Определите его местоположение и убедитесь в его наличии. 
+--Проследите последовательность SCN в архивах и журналах повтора
+alter system switch logfile;
+select * from v$archived_log;
+
+--18. EX. Отключите архивирование. Убедитесь, что архивирование отключено. 
+
+--19. Получите список управляющих файлов.
+select name from v$controlfile;
+
+--20. Получите и исследуйте содержимое управляющего файла.
+select type, record_size, records_total from v$controlfile_record_section;
+
+--21. Определите местоположение файла параметров инстанса. 
+--Убедитесь в наличии этого файла
+show parameter spfile;
+
+--22. Сформируйте PFILE с именем XXX_PFILE.ORA. Исследуйте его содержимое. 
+create pfile = 'PVV_PFILE.ORA' from spfile;
+
+--23. Определите местоположение файла паролей инстанса. Убедитесь в наличии этого файла
+--database/pwdorcl
+SELECT * FROM V$PWFILE_USERS;
+
+--24. Получите перечень директориев для файлов сообщений и диагностики. 
+SELECT * FROM V$DIAG_INFO;
+
+--25. Найдите и исследуйте содержимое протокола работы инстанса (LOG.XML), найдите в нем команды переключения журналов которые вы выполняли.
+--alert/log.xml
