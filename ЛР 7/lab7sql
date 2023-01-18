@@ -1,0 +1,39 @@
+--1.	Получите полный список фоновых процессов. 
+select * from v$bgprocess;
+
+--2.	Определите фоновые процессы, которые запущены и работают в настоящий момент.
+select pname from v$process where background is not null;
+
+--3.	Определите, сколько процессов DBWn работает в настоящий момент.
+select *from v$process where pname like 'DBW%';
+
+--4.	Получите перечень текущих соединений с экземпляром.
+select username, service_name from v$session where username is not null;
+
+--5.	Определите режимы этих соединений.
+select username, service_name, server from v$session where username is not null;
+
+--6.	Определите сервисы (точки подключения экземпляра).
+select name, network_name, pdb from v$services;
+
+--7.	Получите известные вам параметры диспетчера и их значений.
+show parameter dispatcher;
+
+--8.	Укажите в списке Windows-сервисов сервис, реализующий процесс LISTENER.
+--OracleOraDB12Home1TNSListener
+
+--9.	Получите перечень текущих соединений с инстансом. (dedicated, shared). 
+select username, service_name, server from v$session where username is not null;
+
+--10.	Продемонстрируйте и поясните содержимое файла LISTENER.ORA. 
+--C:\app\ora_install_user\product\12.1.0\dbhome_1\network\admin\sample
+
+--11.	Запустите утилиту lsnrctl и поясните ее основные команды.
+--lsnrctl
+--help --> start, stop,status - ready, blocked, unknown
+--services, version
+--servacls - get access control lists
+--reload - reload the parameter files and SIDs
+--save_config - saves configuration changes to parameter file
+--12.	Получите список служб инстанса, обслуживаемых процессом LISTENER.
+--services
